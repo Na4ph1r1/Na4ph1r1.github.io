@@ -2,14 +2,13 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>sweetsins.mp3</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none; /* Запрет выделения текста/картинки */
         }
 
         body {
@@ -41,6 +40,9 @@
             transition: all 0.3s ease;
             filter: brightness(0.95);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
 
         .radio-image:hover {
@@ -111,29 +113,103 @@
 
 <script>
     (function() {
-        const AUDIO_PATH = 'music/sweetdream.mp3';      // Путь к музыке
+        // =============================================
+        // 🎵 ПЛЕЙЛИСТ — ОДИН СЛУЧАЙНЫЙ ТРЕК ВЫБИРАЕТСЯ ПРИ ПЕРВОМ КЛИКЕ
+        // =============================================
+        const PLAYLIST = [
+            'music/sweetdream.mp3',
+            'music/track2.mp3',
+            'music/track3.mp3',
+            'music/track4.mp3',
+            'music/track5.mp3'
+        ];
         
+        // Пути к картинкам
         const IMAGE_OFF = 'images/Radio.png';
         const IMAGE_ON  = 'images/Radio2.png';
         
-        // ------------------------------------------------------------
+        // =============================================
         
         const radioImg = document.getElementById('radioImage');
         const instructionDiv = document.getElementById('instruction');
         
-        const audio = new Audio();
-        audio.src = AUDIO_PATH;
-        audio.loop = true;          // Зацикленная музыка
-        audio.controls = false;     // Без панели управления
-        audio.autoplay = false;
-        audio.preload = 'auto';
-        audio.volume = 0.50;        // Громкость 50%
+        let isRadioOn = false;           // Включено ли радио (один раз)
+        let selectedTrack = null;        // Выбранный случайный трек
+        let audio = null;                // Аудио-объект
         
-        audio.style.display = 'none';
-        document.body.appendChild(audio);
+        // Функция выбора случайного трека из плейлиста
+        function selectRandomTrack() {
+            if (PLAYLIST.length === 0) {
+                console.error('Плейлист пуст! Добавь треки в PLAYLIST');
+                return null;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * PLAYLIST.length);
+            const track = PLAYLIST[randomIndex];
+            console.log(`🎲 Выбран случайный трек [${randomIndex + 1}/${PLAYLIST.length}]: ${track}`);
+            return track;
+        }
         
-        let isRadioOn = false;
-        let musicStarted = false;
+        // Включение радио (один раз)
+        function turnRadioOn() {
+            if (isRadioOn) return;
+            
+            // Выбираем случайный трек (один раз навсегда)
+            selectedTrack = selectRandomTrack();
+            if (!selectedTrack) {
+                console.error('Не удалось выбрать трек из плейлиста');
+                instructionDiv.innerHTML = 'ERRORE - NO TRACKS';
+                instructionDiv.style.background = 'rgba(180,0,0,0.8)';
+                return;
+            }
+            
+            console.log(`🔊 Включаем радио с треком: ${selectedTrack} (будет играть вечно, нельзя сменить)`);
+            
+            // Меняем картинку на включенную
+            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено');
+            
+            // Создаём аудио-объект
+            audio = new Audio();
+            audio.src = selectedTrack;
+            audio.loop = true;           // 🔁 ЗАЦИКЛЕН — будет играть вечно одну и ту же песню
+            audio.controls = false;      // Нет кнопок управления
+            audio.volume = 0.50;
+            audio.style.display = 'none';
+            document.body.appendChild(audio);
+            
+            // Запускаем воспроизведение
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    isRadioOn = true;
+                    console.log('SOUL.RAR IS CORRUPTED! CONTACT YOUR ADMINISTRATOR TO FIX THE ERRORS.');
+                    console.log(`🎵 Играет: ${selectedTrack} (зациклено, нельзя выключить или сменить)`);
+                    
+                    instructionDiv.classList.remove('pulse');
+                    instructionDiv.innerHTML = 'What have you done?..';
+                    instructionDiv.style.opacity = '0.7';
+                    
+                    setTimeout(() => {
+                        if (isRadioOn) {
+                            instructionDiv.style.opacity = '0.4';
+                            instructionDiv.style.fontSize = '10px';
+                        }
+                    }, 3500);
+                    
+                }).catch(err => {
+                    console.warn('ERRORE! YOU CAN\'T FIX ANYTHING.', err);
+                    instructionDiv.innerHTML = 'ERRORE - CANNOT PLAY';
+                    instructionDiv.style.background = 'rgba(180,0,0,0.8)';
+                });
+            }
+            
+            // Визуальный эффект при включении
+            radioImg.style.transition = 'all 0.2s ease';
+            radioImg.style.filter = 'brightness(1.05) drop-shadow(0 0 8px rgba(255,215,0,0.3))';
+            setTimeout(() => {
+                if (radioImg) radioImg.style.filter = '';
+            }, 400);
+        }
         
         function setImageWithFallback(imgElement, src, fallbackSrc, altText) {
             imgElement.src = src;
@@ -143,7 +219,7 @@
                 if (this.src !== fallbackSrc && fallbackSrc) {
                     console.warn(`Не удалось загрузить: ${src}, пробуем fallback`);
                     this.src = fallbackSrc;
-                    this.onerror = null; // чтобы избежать цикла
+                    this.onerror = null;
                 } else {
                     console.error(`Ошибка: ни одно изображение не загрузилось. Проверьте пути: ${src} и ${fallbackSrc}`);
                     this.style.border = '2px solid #ff4444';
@@ -151,56 +227,16 @@
             };
         }
         
-        function turnRadioOn() {
-            if (isRadioOn) return;
-            
-            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено (играет музыка)');
-            
-            const playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    musicStarted = true;
-                    isRadioOn = true;
-                    console.log('SOUL.RAR IS CORRUPTED! CONTACT YOUR ADMINISTRATOR TO FIX THE ERRORS.');
-                    
-                    instructionDiv.classList.remove('pulse');
-                    instructionDiv.innerHTML = 'What have you done?..';
-                    instructionDiv.style.opacity = '0.7';
-    
-                    setTimeout(() => {
-                        if (isRadioOn) {
-                            instructionDiv.style.opacity = '0.4';
-                            instructionDiv.style.fontSize = '10px';
-                        }
-                    }, 3500);
-                    
-                }).catch(err => {
-                    console.warn('ERRORE! YOU CANT FIX ANYTHING.');
-                    setTimeout(() => {
-                        if (!musicStarted) {
-                            audio.play().then(() => {
-                                musicStarted = true;
-                                isRadioOn = true;
-                                console.log('REBOOT SINS.DATA');
-                            }).catch(e => console.warn('ERRORE:', e));
-                        }
-                    }, 50);
-                });
-            }
-            
-            radioImg.style.transition = 'all 0.2s ease';
-            radioImg.style.filter = 'brightness(1.05) drop-shadow(0 0 8px rgba(255,215,0,0.3))';
-            setTimeout(() => {
-                if (radioImg) radioImg.style.filter = '';
-            }, 400);
-        }
-        
+        // Обработчик клика — включает радио один раз, дальше ничего не делает
         function onRadioClick(event) {
             event.stopPropagation();
+            
             if (!isRadioOn) {
-                turnRadioOn();
+                turnRadioOn();   // Первый и единственный клик
             } else {
-                console.log('YOU CANT FIX THIS.');
+                // Радио уже играет — ничего не делаем, не меняем трек
+                console.log('YOU CAN\'T FIX THIS. Radio is already playing.');
+                // Небольшая визуальная обратная связь, что ничего не изменится
                 radioImg.style.transform = 'scale(0.99)';
                 setTimeout(() => {
                     if (radioImg) radioImg.style.transform = '';
@@ -208,35 +244,29 @@
             }
         }
         
+        // Обработчики клика
+        radioImg.onclick = onRadioClick;
         radioImg.addEventListener('click', onRadioClick);
         
+        // Обработка ошибки загрузки картинки
         radioImg.onerror = function() {
-            console.error('ERRORE - CANT SEE YOU FACE:', this.src);
-            console.log(`FIND ${IMAGE_OFF} AND ${IMAGE_ON} IN images/`);
+            console.error('ERRORE - CANT SEE YOUR FACE:', this.src);
+            console.log('FIND Radio.png AND Radio2.png IN images/ FOLDER');
             this.alt = 'SINS';
             this.style.border = '1px solid #555';
         };
-    
-        audio.load();
         
-        audio.addEventListener('canplaythrough', () => {
-            console.log('GET READY TO SUFFER');
-        });
-        
-        audio.addEventListener('error', (e) => {
-            console.error('ERRORE:', AUDIO_PATH);
-            console.error('FIND music/ AND FIX (MP3)');
-            instructionDiv.innerHTML = 'ERRORE - SUFFER';
-            instructionDiv.style.background = 'rgba(180,0,0,0.8)';
-            instructionDiv.style.animation = 'none';
-        });
-        
+        // Предзагрузка картинок
         const preloadOff = new Image();
         preloadOff.src = IMAGE_OFF;
         const preloadOn = new Image();
         preloadOn.src = IMAGE_ON;
         
         console.log('YOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXIT');
+        console.log(`🎵 Плейлист содержит ${PLAYLIST.length} треков:`);
+        PLAYLIST.forEach((track, i) => console.log(`   ${i + 1}. ${track}`));
+        console.log('🔀 При клике РАЗ будет выбран СЛУЧАЙНЫЙ трек и зациклен навсегда');
+        console.log('🔒 Выключить или сменить трек НЕЛЬЗЯ');
     })();
 </script>
 

@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>sweetsins.mp3</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            user-select: none; /* Запрет выделения текста/картинки */
+            /* Убрал user-select: none - он иногда блокирует клики */
         }
 
         body {
@@ -41,6 +41,10 @@
             transition: all 0.3s ease;
             filter: brightness(0.95);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
+            /* Гарантия что картинка кликабельна */
+            pointer-events: auto;
+            position: relative;
+            z-index: 10;
         }
 
         .radio-image:hover {
@@ -83,6 +87,9 @@
             animation: gentlePulse 1.2s ease-in-out infinite;
         }
 
+        /* Добавил отладочную подсветку - убрать потом */
+        /* .radio-image { border: 2px solid red; } */
+
         @media (max-width: 640px) {
             .radio-image {
                 max-width: 95%;
@@ -102,7 +109,8 @@
          id="radioImage"
          src="images/Radio.png" 
          alt="You did it and now you can't change anything..."
-         title="Your sins cannot be washed away...">
+         title="Your sins cannot be washed away..."
+         onclick="console.log('DEBUG: Клик по картинке сработал!')">
 </div>
 
 <div class="instruction pulse" id="instruction">
@@ -111,23 +119,29 @@
 
 <script>
     (function() {
-        const AUDIO_PATH = 'music/sweetdream.mp3';      // Путь к музыке
+        console.log('DEBUG: Скрипт загружен');
         
+        const AUDIO_PATH = 'music/sweetdream.mp3';
         const IMAGE_OFF = 'images/Radio.png';
         const IMAGE_ON  = 'images/Radio2.png';
-        
-        // ------------------------------------------------------------
         
         const radioImg = document.getElementById('radioImage');
         const instructionDiv = document.getElementById('instruction');
         
+        if (!radioImg) {
+            console.error('DEBUG: Элемент radioImg НЕ НАЙДЕН!');
+            return;
+        }
+        
+        console.log('DEBUG: Элемент radioImg найден', radioImg);
+        
         const audio = new Audio();
         audio.src = AUDIO_PATH;
-        audio.loop = true;          // Зацикленная музыка
-        audio.controls = false;     // Без панели управления
+        audio.loop = true;
+        audio.controls = false;
         audio.autoplay = false;
         audio.preload = 'auto';
-        audio.volume = 0.50;        // Громкость 50%
+        audio.volume = 0.50;
         
         audio.style.display = 'none';
         document.body.appendChild(audio);
@@ -143,7 +157,7 @@
                 if (this.src !== fallbackSrc && fallbackSrc) {
                     console.warn(`Не удалось загрузить: ${src}, пробуем fallback`);
                     this.src = fallbackSrc;
-                    this.onerror = null; // чтобы избежать цикла
+                    this.onerror = null;
                 } else {
                     console.error(`Ошибка: ни одно изображение не загрузилось. Проверьте пути: ${src} и ${fallbackSrc}`);
                     this.style.border = '2px solid #ff4444';
@@ -152,10 +166,14 @@
         }
         
         function turnRadioOn() {
+            console.log('DEBUG: turnRadioOn вызвана, isRadioOn =', isRadioOn);
+            
             if (isRadioOn) return;
             
-            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено (играет музыка)');
+            console.log('DEBUG: Меняем картинку на включенную');
+            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено');
             
+            console.log('DEBUG: Пытаемся запустить музыку');
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
@@ -175,7 +193,7 @@
                     }, 3500);
                     
                 }).catch(err => {
-                    console.warn('ERRORE! YOU CAN'T FIX ANYTHING.');
+                    console.warn('ERRORE! YOU CAN\'T FIX ANYTHING.', err);
                     setTimeout(() => {
                         if (!musicStarted) {
                             audio.play().then(() => {
@@ -196,11 +214,12 @@
         }
         
         function onRadioClick(event) {
+            console.log('DEBUG: onRadioClick сработала! event:', event);
             event.stopPropagation();
             if (!isRadioOn) {
                 turnRadioOn();
             } else {
-                console.log('YOU CAN'T FIX THIS.');
+                console.log('YOU CAN\'T FIX THIS.');
                 radioImg.style.transform = 'scale(0.99)';
                 setTimeout(() => {
                     if (radioImg) radioImg.style.transform = '';
@@ -208,11 +227,17 @@
             }
         }
         
+        // Добавляем обработчик ПРЯМО через атрибут (запасной вариант)
+        radioImg.onclick = onRadioClick;
+        
+        // И через addEventListener (дублируем для надежности)
         radioImg.addEventListener('click', onRadioClick);
         
+        console.log('DEBUG: Обработчики клика добавлены');
+        
         radioImg.onerror = function() {
-            console.error('ERRORE - CANT SEE YOU FACE:', this.src);
-            console.log(`FIND ${IMAGE_OFF} AND ${IMAGE_ON} IN images/`);
+            console.error('ERRORE - CANT SEE YOUR FACE:', this.src);
+            console.log('FIND Radio.png AND Radio2.png IN images/ FOLDER');
             this.alt = 'SINS';
             this.style.border = '1px solid #555';
         };
@@ -224,9 +249,9 @@
         });
         
         audio.addEventListener('error', (e) => {
-            console.error('ERRORE:', AUDIO_PATH);
-            console.error('FIND music/ AND FIX (MP3)');
-            instructionDiv.innerHTML = 'ERRORE - SUFFER';
+            console.error('ERRORE with AUDIO:', AUDIO_PATH);
+            console.error('FIND sweetdream.mp3 IN music/ FOLDER (MP3 FORMAT)');
+            instructionDiv.innerHTML = 'ERRORE - MUSIC NOT FOUND';
             instructionDiv.style.background = 'rgba(180,0,0,0.8)';
             instructionDiv.style.animation = 'none';
         });
@@ -237,6 +262,7 @@
         preloadOn.src = IMAGE_ON;
         
         console.log('YOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXIT');
+        console.log('DEBUG: Скрипт полностью загружен, жду клика по картинке');
     })();
 </script>
 

@@ -2,14 +2,14 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>sweetsins.mp3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Винтажная радиосистема — Нажми на радио</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            /* Убрал user-select: none - он иногда блокирует клики */
+            user-select: none; /* Запрет выделения текста/картинки */
         }
 
         body {
@@ -41,22 +41,21 @@
             transition: all 0.3s ease;
             filter: brightness(0.95);
             box-shadow: 0 0 20px rgba(255, 255, 255, 0.05);
-            /* Гарантия что картинка кликабельна */
-            pointer-events: auto;
-            position: relative;
-            z-index: 10;
         }
 
+        /* Эффект при наведении */
         .radio-image:hover {
             transform: scale(1.02);
             filter: brightness(1);
             box-shadow: 0 0 35px rgba(255, 255, 255, 0.15);
         }
 
+        /* Эффект нажатия */
         .radio-image:active {
             transform: scale(0.98);
         }
 
+        /* Стиль подсказки */
         .instruction {
             position: fixed;
             bottom: 25px;
@@ -78,6 +77,7 @@
             font-weight: 500;
         }
 
+        /* Анимация мигания для подсказки до первого нажатия */
         @keyframes gentlePulse {
             0%, 100% { opacity: 0.6; }
             50% { opacity: 1; text-shadow: 0 0 5px rgba(255,215,0,0.5); }
@@ -86,9 +86,6 @@
         .instruction.pulse {
             animation: gentlePulse 1.2s ease-in-out infinite;
         }
-
-        /* Добавил отладочную подсветку - убрать потом */
-        /* .radio-image { border: 2px solid red; } */
 
         @media (max-width: 640px) {
             .radio-image {
@@ -109,8 +106,7 @@
          id="radioImage"
          src="images/Radio.png" 
          alt="You did it and now you can't change anything..."
-         title="Your sins cannot be washed away..."
-         onclick="console.log('DEBUG: Клик по картинке сработал!')">
+         title="Your sins cannot be washed away...">
 </div>
 
 <div class="instruction pulse" id="instruction">
@@ -119,45 +115,47 @@
 
 <script>
     (function() {
-        console.log('DEBUG: Скрипт загружен');
+        // ⚙️ НАСТРОЙКИ (ПРОВЕРЬТЕ ПУТИ К ФАЙЛАМ!) ⚙️
+        const AUDIO_PATH = 'music/sweetdream.mp3';      // Путь к музыке
         
-        const AUDIO_PATH = 'music/sweetdream.mp3';
+        // Пути к изображениям (выключенное/включенное радио)
         const IMAGE_OFF = 'images/Radio.png';
         const IMAGE_ON  = 'images/Radio2.png';
         
+        // ------------------------------------------------------------
+        
+        // Получаем элементы
         const radioImg = document.getElementById('radioImage');
         const instructionDiv = document.getElementById('instruction');
         
-        if (!radioImg) {
-            console.error('DEBUG: Элемент radioImg НЕ НАЙДЕН!');
-            return;
-        }
-        
-        console.log('DEBUG: Элемент radioImg найден', radioImg);
-        
+        // Создаём аудио элемент
         const audio = new Audio();
         audio.src = AUDIO_PATH;
-        audio.loop = true;
-        audio.controls = false;
+        audio.loop = true;          // Зацикленная музыка
+        audio.controls = false;     // Без панели управления
         audio.autoplay = false;
         audio.preload = 'auto';
-        audio.volume = 0.50;
+        audio.volume = 0.75;        // Громкость 75% (можно изменить)
         
+        // Делаем аудио скрытым
         audio.style.display = 'none';
         document.body.appendChild(audio);
         
+        // Состояние: включено ли радио
         let isRadioOn = false;
         let musicStarted = false;
         
+        // Функция для загрузки изображения с fallback (если картинка не найдена)
         function setImageWithFallback(imgElement, src, fallbackSrc, altText) {
             imgElement.src = src;
             imgElement.alt = altText;
             
+            // Если изображение не загрузилось, пробуем fallback (только если fallback отличается)
             imgElement.onerror = function() {
                 if (this.src !== fallbackSrc && fallbackSrc) {
                     console.warn(`Не удалось загрузить: ${src}, пробуем fallback`);
                     this.src = fallbackSrc;
-                    this.onerror = null;
+                    this.onerror = null; // чтобы избежать цикла
                 } else {
                     console.error(`Ошибка: ни одно изображение не загрузилось. Проверьте пути: ${src} и ${fallbackSrc}`);
                     this.style.border = '2px solid #ff4444';
@@ -165,26 +163,27 @@
             };
         }
         
+        // Включаем радио (музыка + смена картинки)
         function turnRadioOn() {
-            console.log('DEBUG: turnRadioOn вызвана, isRadioOn =', isRadioOn);
-            
             if (isRadioOn) return;
             
-            console.log('DEBUG: Меняем картинку на включенную');
-            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено');
+            // Меняем изображение на "включённое" с fallback на текущее (чтобы не сломать интерфейс)
+            setImageWithFallback(radioImg, IMAGE_ON, IMAGE_OFF, 'Радио включено (играет музыка)');
             
-            console.log('DEBUG: Пытаемся запустить музыку');
+            // Запускаем музыку
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     musicStarted = true;
                     isRadioOn = true;
-                    console.log('SOUL.RAR IS CORRUPTED! CONTACT YOUR ADMINISTRATOR TO FIX THE ERRORS.');
+                    console.log('🎵 Радио включено! Музыка играет, картинка изменена.');
                     
+                    // Убираем пульсирующую подсказку и меняем текст
                     instructionDiv.classList.remove('pulse');
                     instructionDiv.innerHTML = 'What have you done?..';
                     instructionDiv.style.opacity = '0.7';
-    
+                    
+                    // Через 3 секунды делаем подсказку менее заметной, но оставляем
                     setTimeout(() => {
                         if (isRadioOn) {
                             instructionDiv.style.opacity = '0.4';
@@ -193,19 +192,21 @@
                     }, 3500);
                     
                 }).catch(err => {
-                    console.warn('ERRORE! YOU CAN\'T FIX ANYTHING.', err);
+                    console.warn('Автовоспроизведение заблокировано, но радио уже должно включиться по клику');
+                    // Если не завелось с первого раза — пробуем перезапустить аудио по-быстрому (редко)
                     setTimeout(() => {
                         if (!musicStarted) {
                             audio.play().then(() => {
                                 musicStarted = true;
                                 isRadioOn = true;
-                                console.log('REBOOT SINS.DATA');
-                            }).catch(e => console.warn('ERRORE:', e));
+                                console.log('🎵 Музыка запущена повторной попыткой');
+                            }).catch(e => console.warn('Не удалось запустить:', e));
                         }
                     }, 50);
                 });
             }
             
+            // Добавляем небольшой визуальный эффект на картинку при включении
             radioImg.style.transition = 'all 0.2s ease';
             radioImg.style.filter = 'brightness(1.05) drop-shadow(0 0 8px rgba(255,215,0,0.3))';
             setTimeout(() => {
@@ -213,13 +214,15 @@
             }, 400);
         }
         
+        // Обработчик клика по радио (кнопка включения)
         function onRadioClick(event) {
-            console.log('DEBUG: onRadioClick сработала! event:', event);
             event.stopPropagation();
             if (!isRadioOn) {
                 turnRadioOn();
             } else {
-                console.log('YOU CAN\'T FIX THIS.');
+                // Если уже включено — ничего не делаем (или можно показать легкое напоминание)
+                console.log('Радио уже работает, музыка играет');
+                // Небольшая визуальная обратная связь
                 radioImg.style.transform = 'scale(0.99)';
                 setTimeout(() => {
                     if (radioImg) radioImg.style.transform = '';
@@ -227,42 +230,40 @@
             }
         }
         
-        // Добавляем обработчик ПРЯМО через атрибут (запасной вариант)
-        radioImg.onclick = onRadioClick;
-        
-        // И через addEventListener (дублируем для надежности)
+        // Вешаем обработчик клика на изображение радио
         radioImg.addEventListener('click', onRadioClick);
         
-        console.log('DEBUG: Обработчики клика добавлены');
-        
+        // Дополнительная страховка: если картинка по какой-то причине не загружается, показываем ошибку в консоли
         radioImg.onerror = function() {
-            console.error('ERRORE - CANT SEE YOUR FACE:', this.src);
-            console.log('FIND Radio.png AND Radio2.png IN images/ FOLDER');
-            this.alt = 'SINS';
+            console.error('❌ Ошибка: не удалось загрузить изображение радио по пути:', this.src);
+            console.log(`Убедитесь, что файлы ${IMAGE_OFF} и ${IMAGE_ON} существуют в папке images/`);
+            this.alt = 'Радио (изображение не найдено)';
             this.style.border = '1px solid #555';
         };
-    
+        
+        // Предзагрузка аудио
         audio.load();
         
+        // Проверка доступности аудиофайла
         audio.addEventListener('canplaythrough', () => {
-            console.log('GET READY TO SUFFER');
+            console.log('✅ Аудиофайл загружен и готов к воспроизведению');
         });
         
         audio.addEventListener('error', (e) => {
-            console.error('ERRORE with AUDIO:', AUDIO_PATH);
-            console.error('FIND sweetdream.mp3 IN music/ FOLDER (MP3 FORMAT)');
-            instructionDiv.innerHTML = 'ERRORE - MUSIC NOT FOUND';
+            console.error('❌ ОШИБКА АУДИО: не удалось загрузить музыку по пути:', AUDIO_PATH);
+            console.error('Проверьте, что файл существует в папке music/ и имеет поддерживаемый формат (MP3)');
+            instructionDiv.innerHTML = '⚠️ МУЗЫКА НЕ НАЙДЕНА ⚠️ (проверьте путь к файлу)';
             instructionDiv.style.background = 'rgba(180,0,0,0.8)';
             instructionDiv.style.animation = 'none';
         });
         
+        // Предзагружаем обе картинки (для быстрой смены)
         const preloadOff = new Image();
         preloadOff.src = IMAGE_OFF;
         const preloadOn = new Image();
         preloadOn.src = IMAGE_ON;
         
-        console.log('YOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXITYOUCANTFIXIT');
-        console.log('DEBUG: Скрипт полностью загружен, жду клика по картинке');
+        console.log('📻 Готово! Нажми на изображение радио, чтобы включить музыку и изменить фото.');
     })();
 </script>
 
